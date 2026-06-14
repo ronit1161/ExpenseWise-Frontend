@@ -8,8 +8,10 @@ export const setAccessToken = (token) => {
 
 export const getAccessToken = () => accessToken;
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: API_URL,
     withCredentials: true
 });
 
@@ -29,21 +31,21 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        
+
         // Check if error is unauthorized and we haven't retried yet
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
-            
+
             try {
                 // Execute refresh call (sends HttpOnly refresh cookie)
-                const response = await axios.post('http://localhost:5000/api/auth/refresh', {}, {
+                const response = await axios.post(`${API_URL}/auth/refresh`, {}, {
                     withCredentials: true
                 });
-                
+
                 if (response.data?.status === 'success') {
                     const { accessToken: newToken } = response.data.data;
                     setAccessToken(newToken);
-                    
+
                     // Re-apply auth header and retry original query
                     originalRequest.headers.Authorization = `Bearer ${newToken}`;
                     return api(originalRequest);
@@ -54,7 +56,7 @@ api.interceptors.response.use(
                 return Promise.reject(error);
             }
         }
-        
+
         return Promise.reject(error);
     }
 );
